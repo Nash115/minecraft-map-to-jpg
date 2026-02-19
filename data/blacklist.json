@@ -1,0 +1,55 @@
+{
+    "all_keywords" : [
+        "air",
+        "portal",
+        "debug",
+        "destroy",
+        "particle",
+        "plant",
+        "seagrass",
+        "carpet",
+        "bush",
+        "fence",
+        "wall",
+        "bed",
+        "fire",
+        "sign",
+        "wire",
+        "glass",
+        "wheat",
+        "potato",
+        "beetroots",
+        "banner",
+        "bubble"
+    ],
+
+    "blocks" : [
+        "bamboo",
+        "door",
+        "trapdoor",
+        "button",
+        "pressure_plate",
+        "rail",
+        "ladder",
+        "chest",
+        "bubble",
+        "grindstone",
+        "anvil",
+        "enchanting_table",
+        "brewing_stand",
+        "cauldron",
+        "beacon",
+        "bedrock",
+        "decorated_pot",
+        "pot",
+        "suspicious_gravel"
+    ],
+
+    "textures_keywords" : [
+        "water",
+        "lava",
+        "bottom",
+        "side",
+        "front"
+    ]
+}

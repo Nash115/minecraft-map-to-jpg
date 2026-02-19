@@ -1,0 +1,3 @@
+amulet-core
+Pillow
+dotenv
