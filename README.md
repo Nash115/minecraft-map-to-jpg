@@ -3,6 +3,19 @@ Convert a minecraft map to an image
 
 # Usage
 
+## Using Docker
+
+1. Copy the `.env.example` file to `.env` and update the `X1`, `Z1`, `X2`, and `Z2` environment variables to specify the coordinates of the area you want to convert. You can delete the `MAP_PATH` and `MC_VERSION_FILE` environment variables **(you don't need them for this usage)**.
+2. Edit the `docker-compose.yml` file to point to your Minecraft world save directory. For example, if your world is located at `/my/path/to/minecraft/saves/world`, you would add the following volume mapping:
+   ```yaml
+     - "/my/path/to/minecraft/saves/world:/app/world"
+   ```
+3. Run the following command to start the Docker container and generate the image:
+   ```bash
+   docker-compose up --build
+   ```
+4. The generated image will be saved in the `output` directory.
+
 ## Simple usage
 
 1. Copy the `.env.example` file to `.env` and update the environment variables as needed.

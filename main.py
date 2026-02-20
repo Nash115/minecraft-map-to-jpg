@@ -15,6 +15,7 @@ OUTPUT_DIR = os.getenv("OUTPUT_DIR", "output")
 BLACKLIST_FILE = os.getenv("BLACKLIST_FILE", "data/blacklist.json")
 COLOR_FILE = os.getenv("COLOR_FILE", "data/colors.json")
 DEFAULT_COLOR = tuple(map(int, os.getenv("DEFAULT_COLOR", "255,0,255").split(",")))
+PROGRESS_TEXT = os.getenv("PROGRESS_TEXT", 1)
 COLOR_SET = load_json(COLOR_FILE)
 BLACKLIST = load_json(BLACKLIST_FILE)
 
@@ -34,6 +35,24 @@ def get_column_color(level, x, z):
             block = Block(level.get_block(x, y, z, "minecraft:overworld"))
             if block.base_name == "air":
                 continue
+            elif block.base_name == "water":
+                additional_color = [0,0,0]
+                water_color_list = list(block.get_color(COLOR_SET) or DEFAULT_COLOR)
+                for dy in range(y-1, -64, -1):
+                    try:
+                        below_block = Block(level.get_block(x, dy, z, "minecraft:overworld"))
+                        if below_block.base_name != "water":
+                            water_color_list[0] = min(water_color_list[0] + additional_color[0], 255)
+                            water_color_list[1] = min(water_color_list[1] + additional_color[1], 255)
+                            water_color_list[2] = min(water_color_list[2] + additional_color[2], 255)
+                            return tuple(water_color_list)
+                        else:
+                            additional_color[0] = min(additional_color[0] - 10, - (water_color_list[0] // 2))
+                            additional_color[1] = min(additional_color[1] - 10, - (water_color_list[1] // 2))
+                            additional_color[2] = max(additional_color[2] - 10, - (water_color_list[2] // 2))
+                    except Exception as e:
+                        warning(f"Error reading block at ({x}, {dy}, {z}): {e}. Skipping.")
+                        break
             if is_blacklisted(block):
                 continue
             color = block.get_color(COLOR_SET)
@@ -83,7 +102,8 @@ def generate_map(world_path, x1, z1, x2, z2):
     try:
         for x in range(width):
             for z in range(height):
-                progress(f"Scanning map {int(((x * height + z) / (width * height)) * 100)}%")
+                if PROGRESS_TEXT == 1:
+                    progress(f"Scanning map {int(((x * height + z) / (width * height)) * 100)}%")
 
                 world_x = x_min + x
                 world_z = z_min + z
