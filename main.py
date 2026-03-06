@@ -3,6 +3,8 @@ from PIL import Image, ImageDraw
 from dotenv import load_dotenv
 import os
 import json
+from datetime import datetime
+import re
 
 from tools.utils import load_json
 from tools.block import Block
@@ -20,6 +22,8 @@ COLOR_SET = load_json(COLOR_FILE)
 BLACKLIST = load_json(BLACKLIST_FILE)
 
 unknown_blocks = set()
+
+DATE_IMAGE_PATTERN = re.compile(r"^(\d{4})-(\d{2})-(\d{2})\.jpg$")
 
 def is_blacklisted(block: Block):
     if block.base_name in BLACKLIST.get("blocks", []):
@@ -66,6 +70,59 @@ def get_column_color(level, x, z):
             continue
     warning(f"Could not find valid block at column ({x}, {z}). Using default color.")
     return DEFAULT_COLOR
+
+
+def cleanup_old_images(output_dir: str):
+    dated_images = []
+
+    for file_name in os.listdir(output_dir):
+        match = DATE_IMAGE_PATTERN.match(file_name)
+        if not match:
+            continue
+
+        try:
+            file_date = datetime.strptime(file_name[:-4], "%Y-%m-%d")
+        except ValueError:
+            # Ignore files that look similar but are not valid dates.
+            continue
+
+        dated_images.append((file_name, file_date))
+
+    if not dated_images:
+        return
+
+    current_year = datetime.now().year
+    keep_by_month_current_year = {}
+    keep_by_year_past = {}
+
+    for file_name, file_date in dated_images:
+        if file_date.year == current_year:
+            key = (file_date.year, file_date.month)
+            prev = keep_by_month_current_year.get(key)
+            if prev is None or file_date > prev[1]:
+                keep_by_month_current_year[key] = (file_name, file_date)
+        elif file_date.year < current_year:
+            key = file_date.year
+            prev = keep_by_year_past.get(key)
+            if prev is None or file_date > prev[1]:
+                keep_by_year_past[key] = (file_name, file_date)
+
+    files_to_keep = {entry[0] for entry in keep_by_month_current_year.values()}
+    files_to_keep.update(entry[0] for entry in keep_by_year_past.values())
+
+    removed_count = 0
+    for file_name, _ in dated_images:
+        if file_name in files_to_keep:
+            continue
+
+        try:
+            os.remove(os.path.join(output_dir, file_name))
+            removed_count += 1
+        except OSError as e:
+            warning(f"Could not delete old image '{file_name}': {e}")
+
+    if removed_count > 0:
+        info(f"Cleanup done: removed {removed_count} old image(s) based on retention rules.")
 
 def generate_map(world_path, x1, z1, x2, z2):
     x_min, z_min = min(x1, x2), min(z1, z2)
@@ -127,9 +184,11 @@ def generate_map(world_path, x1, z1, x2, z2):
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
-    output_path = os.path.join(OUTPUT_DIR, "map.jpg")
+    image_name = f"{datetime.now().strftime('%Y-%m-%d')}.jpg"
+    output_path = os.path.join(OUTPUT_DIR, image_name)
     image.save(output_path, quality=95)
     success(f"Done! Image saved to: {output_path}")
+    cleanup_old_images(OUTPUT_DIR)
 
 
 if __name__ == "__main__":
