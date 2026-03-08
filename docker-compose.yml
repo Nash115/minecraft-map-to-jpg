@@ -15,3 +15,6 @@ services:
       - Z1=${Z1:--50}
       - X2=${X2:-50}
       - Z2=${Z2:-50}
+      - BLOCK_SIZE_PX=${BLOCK_SIZE_PX:-1}
+      - TERRAIN_SHADE_STRENGTH=${TERRAIN_SHADE_STRENGTH:-12}
+      - TERRAIN_SHADE_MAX_DELTA=${TERRAIN_SHADE_MAX_DELTA:-72}
