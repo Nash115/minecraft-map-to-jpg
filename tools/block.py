@@ -3,6 +3,7 @@ from tools.log import fatal_error
 aliases = {
     "grass_path": "dirt_path",
     "stained_terracotta": "terracotta",
+    "bed": "wool"
 }
 
 class Block:
@@ -32,6 +33,10 @@ class Block:
             return tuple(COLOR_SET[self.base_name])
         if COLOR_SET.get(f"{self.base_name}_top"):
             return tuple(COLOR_SET[f"{self.base_name}_top"])
+        if COLOR_SET.get(f"{self.base_name}_block"):
+            return tuple(COLOR_SET[f"{self.base_name}_block"])
+        if COLOR_SET.get(f"{self.base_name}_fire"):
+            return tuple(COLOR_SET[f"{self.base_name}_log"])
         if COLOR_SET.get(f"{self.base_name.replace('_block', '')}"):
             return tuple(COLOR_SET[f"{self.base_name.replace('_block', '')}"])
         
@@ -41,7 +46,8 @@ class Block:
                 f"{material_prop}_{self.base_name}",
                 f"{material_prop}",
                 f"{material_prop}s",
-                f"{material_prop}_planks"
+                f"{material_prop}_planks",
+                f"{material_prop}_block_top",
             ]
             for new_name in new_names:
                 if COLOR_SET.get(new_name):
@@ -50,6 +56,15 @@ class Block:
         if color_prop:
             new_names = [
                 f"{color_prop}_{self.base_name}"
+            ]
+            for new_name in new_names:
+                if COLOR_SET.get(new_name):
+                    return tuple(COLOR_SET[new_name])
+        age_prop = self.properties.get("age", "")
+        if age_prop:
+            new_names = [
+                f"{self.base_name}_stage{age_prop}",
+                f"{self.base_name}_stage0"
             ]
             for new_name in new_names:
                 if COLOR_SET.get(new_name):

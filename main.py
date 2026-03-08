@@ -12,7 +12,7 @@ from tools.log import info, error, warning, fatal_error, success, progress
 
 load_dotenv()
 
-OUTPUT_WIDTH = int(os.getenv("OUTPUT_WIDTH", 1920))
+BLOCK_SIZE_PX = int(os.getenv("BLOCK_SIZE_PX", 1))
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "output")
 BLACKLIST_FILE = os.getenv("BLACKLIST_FILE", "data/blacklist.json")
 COLOR_FILE = os.getenv("COLOR_FILE", "data/colors.json")
@@ -25,6 +25,10 @@ unknown_blocks = set()
 
 DATE_IMAGE_PATTERN = re.compile(r"^(\d{4})-(\d{2})-(\d{2})\.jpg$")
 
+# Height-based shading for terrain relief (mountains, trees, cliffs, etc.)
+TERRAIN_SHADE_STRENGTH = int(os.getenv("TERRAIN_SHADE_STRENGTH", 12))
+TERRAIN_SHADE_MAX_DELTA = int(os.getenv("TERRAIN_SHADE_MAX_DELTA", 72))
+
 def is_blacklisted(block: Block):
     if block.base_name in BLACKLIST.get("blocks", []):
         return True
@@ -33,7 +37,11 @@ def is_blacklisted(block: Block):
             return True
     return False
 
-def get_column_color(level, x, z):
+def clamp_rgb(color):
+    return tuple(max(0, min(255, int(c))) for c in color)
+
+
+def get_column_surface(level, x, z):
     for y in range(319, -64, -1):
         try:
             block = Block(level.get_block(x, y, z, "minecraft:overworld"))
@@ -49,7 +57,11 @@ def get_column_color(level, x, z):
                             water_color_list[0] = min(water_color_list[0] + additional_color[0], 255)
                             water_color_list[1] = min(water_color_list[1] + additional_color[1], 255)
                             water_color_list[2] = min(water_color_list[2] + additional_color[2], 255)
-                            return tuple(water_color_list)
+                            return {
+                                "color": clamp_rgb(tuple(water_color_list)),
+                                "y": y,
+                                "is_water": True,
+                            }
                         else:
                             additional_color[0] = min(additional_color[0] - 10, - (water_color_list[0] // 2))
                             additional_color[1] = min(additional_color[1] - 10, - (water_color_list[1] // 2))
@@ -64,12 +76,34 @@ def get_column_color(level, x, z):
                 warning(f"Unknown block '{block.json()}' at ({x}, {y}, {z}).")
                 unknown_blocks.add(json.dumps(block.json(), sort_keys=True))
                 continue
-            return color
+            return {
+                "color": color,
+                "y": y,
+                "is_water": False,
+            }
         except Exception as e:
             warning(f"Error reading block at ({x}, {y}, {z}): {e}. Skipping.")
             continue
     warning(f"Could not find valid block at column ({x}, {z}). Using default color.")
-    return DEFAULT_COLOR
+    return {
+        "color": DEFAULT_COLOR,
+        "y": -64,
+        "is_water": False,
+    }
+
+
+def get_surface_cached(level, x, z, surface_cache):
+    key = (x, z)
+    if key not in surface_cache:
+        surface_cache[key] = get_column_surface(level, x, z)
+    return surface_cache[key]
+
+
+def shade_terrain_color(base_color, dx_height, dz_height):
+    # Simulate a fixed light direction from north-west by combining local slopes.
+    delta = dx_height + dz_height
+    shade = max(-TERRAIN_SHADE_MAX_DELTA, min(TERRAIN_SHADE_MAX_DELTA, delta * TERRAIN_SHADE_STRENGTH))
+    return clamp_rgb((base_color[0] + shade, base_color[1] + shade, base_color[2] + shade))
 
 
 def cleanup_old_images(output_dir: str):
@@ -135,10 +169,9 @@ def generate_map(world_path, x1, z1, x2, z2):
         error("Error: Invalid selection area. Aborting map generation.")
         return
     
-    ratio = height / width
-    img_width = OUTPUT_WIDTH
-    img_height = int(OUTPUT_WIDTH * ratio)
-    pixel_per_block = img_width / width
+    img_width = width * BLOCK_SIZE_PX
+    img_height = height * BLOCK_SIZE_PX
+    pixel_per_block = BLOCK_SIZE_PX
 
     info(f"Scanning area: {width}x{height} ({width * height} blocks)")
     info(f"Output image: {img_width}x{img_height} px")
@@ -155,6 +188,7 @@ def generate_map(world_path, x1, z1, x2, z2):
     draw = ImageDraw.Draw(image)
 
     info("Starting scan... (this may take a while for large areas)")
+    surface_cache = {}
 
     try:
         for x in range(width):
@@ -165,7 +199,16 @@ def generate_map(world_path, x1, z1, x2, z2):
                 world_x = x_min + x
                 world_z = z_min + z
 
-                color = get_column_color(level, world_x, world_z)
+                center = get_surface_cached(level, world_x, world_z, surface_cache)
+                color = center["color"]
+
+                # Keep existing water behavior untouched; add terrain relief only on non-water surfaces.
+                if not center["is_water"]:
+                    east = get_surface_cached(level, world_x + 1, world_z, surface_cache)
+                    north = get_surface_cached(level, world_x, world_z - 1, surface_cache)
+                    dx_height = center["y"] - east["y"]
+                    dz_height = center["y"] - north["y"]
+                    color = shade_terrain_color(color, dx_height, dz_height)
 
                 x1p = x * pixel_per_block
                 z1p = z * pixel_per_block

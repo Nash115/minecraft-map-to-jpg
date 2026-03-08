@@ -1,6 +1,5 @@
 {
     "all_keywords" : [
-        "air",
         "portal",
         "debug",
         "destroy",
@@ -9,22 +8,17 @@
         "seagrass",
         "carpet",
         "bush",
-        "fence",
-        "wall",
-        "bed",
-        "fire",
         "sign",
         "wire",
         "glass",
-        "wheat",
-        "potato",
         "beetroots",
         "banner",
-        "bubble"
+        "bubble",
+        "_air"
     ],
 
     "blocks" : [
-        "bamboo",
+        "air",
         "door",
         "trapdoor",
         "button",

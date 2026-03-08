@@ -35,3 +35,14 @@ Convert a minecraft map to an image
 You can uptate the `colors.json` file to add new blocks for new versions of Minecraft for example.
 1. Add the `MC_VERSION_FILE` environment variable to point to the Minecraft .jar file you want to extract colors from. (e.g., `MC_VERSION_FILE="/.../minecraft/versions/1.20.4/1.20.4.jar"`)
 2. Run `python3 generate_colors.py` to generate a new `colors.json` file with the colors extracted from the specified Minecraft version.
+
+## Relief shading
+
+The renderer includes a terrain relief effect on non-water blocks to add visual depth (mountains, trees, cliffs, etc.).
+
+- `TERRAIN_SHADE_STRENGTH`: intensity of the shading per height step (default: `12`)
+- `TERRAIN_SHADE_MAX_DELTA`: maximum light/dark adjustment in RGB values (default: `72`)
+
+## Custom block size
+
+By default, each Minecraft block is rendered as a 1x1 pixel in the output image. You can adjust this by setting the `BLOCK_SIZE_PX` environment variable to a higher value (e.g., `2` for 2x2 pixels per block). Note that increasing the block size will also increase the dimensions of the output image accordingly.
