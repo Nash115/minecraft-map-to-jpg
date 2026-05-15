@@ -4,13 +4,11 @@ services:
     container_name: mc-map-to-jpg
     volumes:
       - ./data:/app/data:ro
-      - ./output:/app/output
-      # Edit the path to your Minecraft world save directory
-      - "/.../minecraft/saves/world:/app/world"
+      - ${OUTPUT_DIR}:/app/output
+      - ${MAP_PATH}:/app/world
     environment:
       - MAP_PATH=/app/world
-      - PROGRESS_TEXT=0
-      # Edit the coordinates here or set them as environment variables (or in .env) when running the container
+      - PROGRESS_TEXT=${PROGRESS_TEXT:-0}
       - X1=${X1:--50}
       - Z1=${Z1:--50}
       - X2=${X2:-50}
